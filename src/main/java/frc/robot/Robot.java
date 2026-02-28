@@ -26,12 +26,14 @@ public class Robot extends TimedRobot {
 
     @Override
     public void robotPeriodic() {
-        m_timeAndJoystickReplay.update();
         CommandScheduler.getInstance().run(); 
     }
+    @Override
+    public void robotInit(){}
 
     @Override
-    public void disabledInit() {}
+    public void disabledInit() {
+    }
 
     @Override
     public void disabledPeriodic() {}
@@ -59,6 +61,7 @@ public class Robot extends TimedRobot {
         if (m_autonomousCommand != null) {
             CommandScheduler.getInstance().cancel(m_autonomousCommand);
         }
+        m_timeAndJoystickReplay.update();
     }
 
     @Override

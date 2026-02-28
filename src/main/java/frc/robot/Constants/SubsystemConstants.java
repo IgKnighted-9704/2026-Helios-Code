@@ -110,4 +110,9 @@ public class SubsystemConstants {
                 public static boolean desiredVelReached = false;
                 public static boolean desiredAngleReached = false;
         }
+
+        public static class ControllerConstants{
+            //Joystick 2 Max Drive Speed Ratio
+                public static double joy2DriveRatio = 1.0859668067227;
+        }
 }
