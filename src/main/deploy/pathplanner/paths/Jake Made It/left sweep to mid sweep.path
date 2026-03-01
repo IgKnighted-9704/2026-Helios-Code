@@ -1,0 +1,54 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 8.631,
+        "y": 7.436
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 8.754420454545455,
+        "y": 5.879920454545454
+      },
+      "isLocked": false,
+      "linkedName": "left midline"
+    },
+    {
+      "anchor": {
+        "x": 8.631,
+        "y": 4.035
+      },
+      "prevControl": {
+        "x": 8.754420454545455,
+        "y": 5.8180795454545455
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "mid sweep"
+    }
+  ],
+  "rotationTargets": [],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 4.93,
+    "maxAcceleration": 6.2,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -177.9053946103535
+  },
+  "reversed": false,
+  "folder": "temu nashoba",
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 180.0
+  },
+  "useDefaultConstraints": true
+}

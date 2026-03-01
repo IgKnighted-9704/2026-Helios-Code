@@ -11,6 +11,7 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
@@ -52,6 +53,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
+
+    /* SwerveRequest.ApplyChassisSpeeds */
+        SwerveRequest.ApplyRobotSpeeds m_applyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
 
     /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
     private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(
@@ -102,7 +106,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         ),
         new SysIdRoutine.Mechanism(
             output -> {
-                /* output is actually radians per second, but SysId only supports "volts" */
+                /* output is actually radians per second,    but SysId only supports "volts" */
                 setControl(m_rotationCharacterization.withRotationalRate(output.in(Volts)));
                 /* also log the requested output for SysId */
                 SignalLogger.writeDouble("Rotational_Rate", output.in(Volts));
@@ -133,13 +137,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
-        RobotConfig config;
-            try{
-                config = RobotConfig.fromGUISettings();
-            } catch (Exception e) {
-                // Handle exception as needed
-                e.printStackTrace();
-            }
+        configurePathPlanner();
     }
 
     /**
@@ -164,13 +162,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
-        RobotConfig config;
-            try{
-                config = RobotConfig.fromGUISettings();
-            } catch (Exception e) {
-                // Handle exception as needed
-                e.printStackTrace();
-            }
+        configurePathPlanner();
     }
 
     /**
@@ -203,14 +195,58 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
-        RobotConfig config;
+        configurePathPlanner();
+    }
+    /**
+     * Configures the PathPlanner AutoBuilder for this drivetrain. This allows you to use PathPlanner's path following features with this drivetrain.
+     */
+
+    private void configurePathPlanner(){
+        RobotConfig config = null;
             try{
                 config = RobotConfig.fromGUISettings();
             } catch (Exception e) {
                 // Handle exception as needed
                 e.printStackTrace();
             }
+        if(config != null){
+                  //Configure Auto Builder
+            AutoBuilder.configure(
+            () -> this.getState().Pose, // Robot pose supplier
+            pose -> this.seedFieldCentric(pose.getRotation()), // Method to reset odometry (will be called if your auto has a starting pose)
+            () -> this.getState().Speeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+            (speeds, feedforwards) -> this.setControl(m_applyRobotSpeeds.withSpeeds(speeds).withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesX()).withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesY())), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
+            new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
+                    new PIDConstants(0.0001, 0.0, 0.0), // Translation PID constants
+                    new PIDConstants(5, 0.0, 0.0) // Rotation PID constants
+            ),
+            config, // The robot configuration
+            () -> {
+
+              // Boolean supplier that controls when the path will be mirrored for the red alliance
+              // This will flip the path being followed to the red side of the field.
+              // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
+
+              var alliance = DriverStation.getAlliance();
+              if (alliance.isPresent()) {
+                return alliance.get() == DriverStation.Alliance.Red;
+              }
+              return false;
+            },
+            this // Reference to this subsystem to set requirements
+            );
+        }
     }
+    
+    /**
+     * 
+     * Returns a command that runs the specified path from PathPlanner. The path must be located in the "paths" folder in the project directory, and should be created using the PathPlanner tool.
+     * @param name
+     * @return Auto Command
+     */
+        public Command getAuton(String name){
+            return new PathPlannerAuto(name);
+        }
 
     /**
      * Returns a command that applies the specified control request to this swerve drivetrain.
@@ -263,6 +299,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 m_hasAppliedOperatorPerspective = true;
             });
         }
+        
     }
 
     private void startSimThread() {
