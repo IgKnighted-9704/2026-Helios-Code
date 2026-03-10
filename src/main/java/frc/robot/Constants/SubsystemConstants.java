@@ -1,11 +1,13 @@
 package frc.robot.Constants;
 
+import edu.wpi.first.math.util.Units;
+
 public class SubsystemConstants {
 
         public static class LightSensor{
             public static final int INTAKE_SENSOR_ID = 0;
-            public static final int INDEXER_SENSOR_ID = 0;
-            public static final int HOPPER_MAX_LIMIT_SENSOR_ID = 0;
+            public static final int INDEXER_SENSOR_ID = 1;
+            public static final int HOPPER_MAX_LIMIT_SENSOR_ID = 2;
         }
 
         public static class Vision{
@@ -13,6 +15,11 @@ public class SubsystemConstants {
                 public static final double LL_X_MULTIPLIER = 1;
                 public static final double LL_Y__MULTIPLIER = 1;
                 public static final double LL_Z_MULTIPLIER = 1;
+            
+            public static final double PP_MAX_VELOCITY = 0;
+            public static final double PP_MAX_ACCELERATION = 0;
+            public static final double PP_MAX_ANGULAR_VELOCITY = 0;
+            public static final double PP_MAX_ANGULAR_ACCELERATION = 0;
 
         }
 
@@ -44,8 +51,8 @@ public class SubsystemConstants {
         }
 
         public static class IntakeSubsystemConstants{
-            public static final int INTAKE_MOTOR_ID = 0;
-            public static final int INTAKE_PIVOT_MOTOR_ID = 0;
+            public static final int INTAKE_MOTOR_ID = 18;
+            public static final int INTAKE_PIVOT_MOTOR_ID = 22;
 
             //HARDWARE CONSTANTS
                 public static final double SLIDER_OFFSET = 0;
@@ -67,10 +74,9 @@ public class SubsystemConstants {
         }
 
         public static class HopperSubsystemConstants{
-            public static final int HOPPER_ID_A = 0;
-            public static final int HOPPER_ID_B = 0;
-            public static final int HOPPER_ID_C = 0;
-            public static final int INDEX_MOTOR_ID = 0;
+            public static final int HOPPER_ID_A = 20;
+            public static final int HOPPER_ID_B = 21;
+            public static final int KICKER_MOTOR_ID = 17;
             
             //SPEED CONSTANTS
                 public static final double INDEXER_SPEED = 0;
@@ -80,11 +86,11 @@ public class SubsystemConstants {
 
         public static class ShooterSubsystemConstants{
             public static final int APRILTAG_TARGET_FIDUCIALID = 0;
-            public static final int SHOOTER_ANGLE_ID = 0;
-            public static final int SHOOTER_ID_A = 0;
-            public static final int SHOOTER_ID_B = 0;
-            public static final int SHOOTER_ID_C = 0;
-            public static final int SHOOTER_ID_D = 0;
+            public static final int SHOOTER_ANGLE_ID = 23;
+            public static final int SHOOTER_ID_A = 13;
+            public static final int SHOOTER_ID_B = 14;
+            public static final int SHOOTER_ID_C = 15;
+            public static final int SHOOTER_ID_D = 16;
             //PID - Angle
                 public static double SHOOTER_ANGLE_kP = 0;
                 public static double SHOOTER_ANGLE_kI = 0;
@@ -98,12 +104,16 @@ public class SubsystemConstants {
                 public static double SHOOTER_SPEED_kV = 0;
                 public static double SHOOTER_SPEED_kA = 0;
             //HARDWARE CONSTANTS
-                public static double FLYWHEEL2KRAKEN_GEAR_RATIO = 0.66666666666666666666666666666667; // 24 : 36
-                public static double FLYWHEEL_RADIUS_METERS = 2;
+                public static double KRAKEN2FLYWHEEL_GEAR_RATIO = 1.5; // 3 : 2, 3 rotations of the flywheel = 2 rotations of the kraken
+                public static double FLYWHEEL_RADIUS_METERS = Units.inchesToMeters(2);
                 public static double SHOOTER_ANGLE_OFFSET = 0;
-            //SHOOTER ANGLE CONSTRAINTS
+            //SHOOTER CONSTRAINTS
                 public static double MAX_ANGLE = 0;
                 public static double MIN_ANGLE = 0;
+                public static double SHOOTER_LOW_SPEED = 45;
+                public static double SHOOTER_HIGH_SPEED = 45;
+                public static double DISTANCE_SHORT = 0;
+                public static double DISTANCE_FAR = 0;
                 public static double SPEED_TOLERANCE = 0;
                 public static double ANGLE_TOLERANCE = 0;
             //PERIODIC CONSTANTS

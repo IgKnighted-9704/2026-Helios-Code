@@ -18,11 +18,16 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.Constants.SubsystemConstants.ShooterSubsystemConstants;
 import frc.robot.Constants.SubsystemConstants.Vision;
+import frc.robot.commands.CommandSwerveDrivetrain;
 import frc.robot.subsystems.utility.LimelightHelpers;
 import frc.robot.subsystems.utility.LimelightHelpers.LimelightResults;
 import frc.robot.subsystems.utility.LimelightHelpers.LimelightTarget_Fiducial;
 
 public class ShooterSubsystem extends SubsystemBase{
+
+    //Type
+        boolean enableComp;
+        boolean enableTest = false;
    
     //Shooter Motor
         private final TalonFX shooterA = new TalonFX(ShooterSubsystemConstants.SHOOTER_ID_A);
@@ -49,6 +54,8 @@ public class ShooterSubsystem extends SubsystemBase{
             ShooterSubsystemConstants.SHOOTER_SPEED_kS,
             ShooterSubsystemConstants.SHOOTER_SPEED_kV
         );
+    //Drive Train
+    private final CommandSwerveDrivetrain drivetrain;
 
     //Data
         private final ShuffleboardTab ShooterSubsystemTab = Shuffleboard.getTab("Shooter Subsystem Tab");
@@ -75,8 +82,13 @@ public class ShooterSubsystem extends SubsystemBase{
        private double target_distance;
        private double target_height;
 
-       public ShooterSubsystem(boolean enableVision){
-            
+       public ShooterSubsystem(boolean enableComp, boolean enableVision, CommandSwerveDrivetrain drivetrain){
+            //Type
+                this.enableComp = enableComp;
+
+            //Initializing Drivetrain
+                this.drivetrain = drivetrain;
+        
             //Initializing Tracker Variables
                 enableSubsystem = true;
                 this.enableVision = enableVision;
@@ -105,13 +117,13 @@ public class ShooterSubsystem extends SubsystemBase{
         private double getShooterVelocityMeters(){
             return 
                 (shooterA.getVelocity().getValueAsDouble() * (2*Math.PI) 
-                    * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.FLYWHEEL2KRAKEN_GEAR_RATIO + 
+                    * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.KRAKEN2FLYWHEEL_GEAR_RATIO + 
                 shooterB.getVelocity().getValueAsDouble() * (2*Math.PI) 
-                    * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.FLYWHEEL2KRAKEN_GEAR_RATIO + 
+                    * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.KRAKEN2FLYWHEEL_GEAR_RATIO + 
                 shooterC.getVelocity().getValueAsDouble() * (2*Math.PI) 
-                    * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.FLYWHEEL2KRAKEN_GEAR_RATIO +
+                    * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.KRAKEN2FLYWHEEL_GEAR_RATIO +
                 shooterD.getVelocity().getValueAsDouble() * (2*Math.PI) 
-                    * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.FLYWHEEL2KRAKEN_GEAR_RATIO)
+                    * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.KRAKEN2FLYWHEEL_GEAR_RATIO)
                 /4;
         }
 
@@ -146,25 +158,32 @@ public class ShooterSubsystem extends SubsystemBase{
             return desired_Angle;
         }
 
+        public double generateVelocity(double distance){
+            // Base velocity based on distance
+            double baseVelocity = (distance < ShooterSubsystemConstants.DISTANCE_SHORT)
+                ? ShooterSubsystemConstants.SHOOTER_LOW_SPEED
+                : ShooterSubsystemConstants.SHOOTER_HIGH_SPEED;
 
-        //IDEAL PHYSICS, ACCOUNT FOR DRAG LATER
-            //θ = arctan(y/x)
-            //yVel
-                //v^2 - u^2 = 2ax, where v = 0, u = initial velocity along y, a = acceleration, x is target height relative to cam.
-                //v(ideal) sin(θ) = u, so v(ideal) = u/sin(θ), so v(ideal) = sqrt(2ax)/sin(θ)
-            //xVel 
-                //v(ideal) cos(θ) = u
-                //(sqrt(2ax)/sin(θ)) cos(θ) = u
-            //Overall
-                // X Velocity =  (sqrt(2ax)/sin(θ)) cos(θ)
-                // Y Velocity = (sqrt(2ax))
-                
-        public double generateVelocity(){
-            double angle = Math.atan2(target_height, target_distance);
-            double yVel = Math.sqrt(2 * 9.80665 * target_height);
-            double xVel = (angle > 0) ? (Math.sqrt(2 * 9.80665 * target_height)/Math.sin(angle)) * Math.cos(angle) : 0;
-                double velocity = Math.hypot(xVel, yVel);
-            return velocity;
+            // Get robot forward/backward velocity (toward target)
+            double robotForwardVel = drivetrain.getState().Speeds.vyMetersPerSecond;
+
+            // Compensate shooter speed for robot motion
+            double correctedVelocity = baseVelocity - robotForwardVel;
+
+            // Clamp to valid range
+            correctedVelocity = MathUtil.clamp(correctedVelocity, 0, ShooterSubsystemConstants.SHOOTER_HIGH_SPEED);
+
+            return correctedVelocity;
+        }
+
+        public double generateAngle(double distance, double height){
+            double velocity = generateVelocity(distance);
+            return Units.radiansToDegrees(
+               Math.atan(
+                    (Math.pow(velocity, 2) + Math.sqrt(Math.pow(velocity, 4) - 9.80665 * (9.80665 * Math.pow(distance, 2) + 2 * height * Math.pow(velocity, 2)))) 
+                    / (9.80665 * distance)
+                )   
+            );
         }
 
     //Command Based Methods
@@ -189,10 +208,17 @@ public class ShooterSubsystem extends SubsystemBase{
             }
             return Commands.none();
         }
+    
+        //TEST
+            public Command testCommand(boolean testShooter){
+                return Commands.runOnce(()->{
+                      enableTest = testShooter;
+                });
+            }
 
     @Override
     public void periodic(){
-        if(enableSubsystem){
+        if(enableSubsystem && enableComp){
             //Shooter Speed 
                 double sPID = shooterSpeedPID.calculate(getShooterVelocityMeters(), desired_Velocity);
                 double sFF = shooterSpeedFF.calculate(desired_Velocity);
@@ -207,7 +233,7 @@ public class ShooterSubsystem extends SubsystemBase{
                 ShooterSubsystemConstants.desiredVelReached = 
                     desired_Velocity != 0 ? Math.abs(desired_Velocity-getShooterVelocityMeters()) < ShooterSubsystemConstants.SPEED_TOLERANCE : false;
                 ShooterSubsystemConstants.desiredAngleReached = 
-                     desired_Angle != 0 ? Math.abs(desired_Velocity-getShooterVelocityMeters()) < ShooterSubsystemConstants.SPEED_TOLERANCE : false;
+                     desired_Angle != 0 ? Math.abs(desired_Angle-getShooterAngleDegrees()) < ShooterSubsystemConstants.ANGLE_TOLERANCE : false;
             //Vision
             if(enableVision){
                 boolean foundTarget = false;
@@ -224,8 +250,8 @@ public class ShooterSubsystem extends SubsystemBase{
                         }
                     }
                 if(foundTarget){
-                  setDesired_Angle(Units.radiansToDegrees(Math.atan2(target_height, target_distance)));
-                  setDesiredVelocity(generateVelocity());
+                  setDesiredVelocity(generateVelocity(target_distance));
+                  setDesired_Angle(generateAngle(target_distance, target_height));
                 }
             }
             //Data
@@ -244,5 +270,18 @@ public class ShooterSubsystem extends SubsystemBase{
                 shooterSpeedFF.setKv(shooterSpeed_kV.getDouble(shooterSpeedFF.getKv()));
         }
 
+            if(!enableComp && enableTest){
+                double speed = 0.5;
+              shooterA.set(speed);
+              shooterB.set(speed);
+              shooterC.set(speed);
+              shooterD.set(speed);
+            } else {
+                double speed = 0;
+              shooterA.set(speed);
+              shooterB.set(speed);
+              shooterC.set(speed);
+              shooterD.set(speed);
+            }
     }
 }

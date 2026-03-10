@@ -11,14 +11,14 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.Constants.TunerConstants;
 import frc.robot.commands.CommandSwerveDrivetrain;
+import frc.robot.subsystems.misc.HopperSubsystem;
+import frc.robot.subsystems.misc.ShooterSubsystem;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired tp speed
@@ -38,6 +38,10 @@ public class RobotContainer {
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
+    //Subsystem Initialization
+        private final ShooterSubsystem shooterSS =  new ShooterSubsystem(false, false, drivetrain);
+        private final HopperSubsystem hopperSS = new HopperSubsystem(false);
+
     public RobotContainer() {
         configureBindings();
     }
@@ -45,29 +49,34 @@ public class RobotContainer {
     private void configureBindings() {
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
-        drivetrain.setDefaultCommand(
-            // Drivetrain will execute this command periodically
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.15) // Drive forward with negative Y (forward)
-                    .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.2) // Drive left with negative X (left)
-                    .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
-            )
-        );
+        // drivetrain.setDefaultCommand(
+        //     // Drivetrain will execute this command periodically
+        //     drivetrain.applyRequest(() ->
+        //         drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.15) // Drive forward with negative Y (forward)
+        //             .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.2) // Drive left with negative X (left)
+        //             .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+        //     )
+        // );
+
+        joystick2.rightBumper().whileTrue(shooterSS.testCommand(true)).onFalse(shooterSS.testCommand(false));
+        joystick2.leftBumper().whileTrue(hopperSS.testCommand(true)).onFalse(hopperSS.testCommand(false));
 
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
         RobotModeTriggers.disabled().whileTrue(
-            drivetrain.applyRequest(() -> idle).ignoringDisable(true)
+            drivetrain.applyRequest(() -> idle).ignoringDisable(true)   
         );
 
-        joystick2.start().whileTrue(drivetrain.applyRequest(() -> brake));
-        joystick2.a().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-joystick2.getLeftY(), -joystick2.getLeftX()))
-        ));
+        // joystick2.start().whileTrue(drivetrain.applyRequest(() -> brake));
+        // joystick2.a().whileTrue(drivetrain.applyRequest(() ->
+        //     point.withModuleDirection(new Rotation2d(-joystick2.getLeftY(), -joystick2.getLeftX()))
+        // ));
 
         // Reset the field-centric heading on left bumper press.
         joystick2.y().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+
+
 
         drivetrain.registerTelemetry(logger::telemeterize);
     }

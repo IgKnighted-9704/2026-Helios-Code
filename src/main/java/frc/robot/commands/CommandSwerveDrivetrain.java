@@ -15,10 +15,14 @@ import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.path.PathConstraints;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -26,9 +30,14 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Robot;
+import frc.robot.Constants.SubsystemConstants.Vision;
 import frc.robot.Constants.TunerConstants.TunerSwerveDrivetrain;
+import frc.robot.subsystems.utility.LimelightHelpers;
+import frc.robot.subsystems.utility.LimelightHelpers.PoseEstimate;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -299,7 +308,29 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 m_hasAppliedOperatorPerspective = true;
             });
         }
-        
+        //Vision
+            LimelightHelpers.SetRobotOrientation(Vision.CAM_LIMELIGHT, this.getState().Pose.getRotation().getDegrees(), 0, 0, 0, 0,0);
+            LimelightHelpers.SetIMUMode(Vision.CAM_LIMELIGHT, 
+                (DriverStation.isAutonomous()) ? 1 : 4
+            );
+                // 1 -> EXTERNAL_SEED : Seed internal IMU
+                // 4 -> INTERNAL_EXTERNAL_ASSIST : Use internal IMU + MT1
+            LimelightHelpers.PoseEstimate mt2 = 
+            (DriverStation.getAlliance().get() == Alliance.Blue) ? 
+                LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(Vision.CAM_LIMELIGHT) : 
+                LimelightHelpers.getBotPoseEstimate_wpiRed_MegaTag2(Vision.CAM_LIMELIGHT);
+            boolean doRejectUpdate = false;
+                if(Math.abs(this.getPigeon2().getAngularVelocityZDevice().getValueAsDouble())> 360){
+                    doRejectUpdate = true;
+                }
+                if(mt2.tagCount == 0){
+                    doRejectUpdate = true;
+                }
+            if(!doRejectUpdate){
+                this.setVisionMeasurementStdDevs(VecBuilder.fill(0.7, 0.7, 9999999));
+                this.addVisionMeasurement(mt2.pose, mt2.timestampSeconds);
+            }
+
     }
 
     private void startSimThread() {
@@ -360,5 +391,44 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     @Override
     public Optional<Pose2d> samplePoseAt(double timestampSeconds) {
         return super.samplePoseAt(Utils.fpgaToCurrentTime(timestampSeconds));
+    }
+
+    public Command driveToPose(Pose2d targetPose){
+        PathConstraints constraints = new PathConstraints(
+            Vision.PP_MAX_VELOCITY, 
+            Vision.PP_MAX_ACCELERATION, 
+            Vision.PP_MAX_ANGULAR_VELOCITY, 
+            Vision.PP_MAX_ANGULAR_ACCELERATION
+        );
+        Command pathfindingCommand = AutoBuilder.pathfindToPose(targetPose, constraints, 0.0);
+        return pathfindingCommand;
+    }
+
+    public Command driveToPose(Translation2d targetTranslation, Translation2d velocityTranslation){
+
+        double velocityMag = velocityTranslation.getNorm();
+        if(velocityMag < 0.001){
+            return Commands.none();
+        }
+
+        double distance = targetTranslation.getNorm();
+        double time = distance / velocityMag;
+
+        var idle = new SwerveRequest.Idle();
+
+        return Commands.sequence(
+            this.applyRequest(() -> 
+                m_applyRobotSpeeds.withSpeeds(
+                    ChassisSpeeds.fromFieldRelativeSpeeds(
+                        velocityTranslation.getX(),
+                        velocityTranslation.getY(),
+                        0,
+                        this.getState().Pose.getRotation()
+                    )
+                )
+            ).withTimeout(time),
+
+            this.applyRequest(() -> idle)
+        );   
     }
 }
