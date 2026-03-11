@@ -11,7 +11,7 @@ public class SubsystemConstants {
         }
 
         public static class Vision{
-            public static final String CAM_LIMELIGHT = "limeLight-knight";
+            public static final String CAM_LIMELIGHT = "limelight-knight";
                 public static final double LL_X_MULTIPLIER = 1;
                 public static final double LL_Y__MULTIPLIER = 1;
                 public static final double LL_Z_MULTIPLIER = 1;
@@ -81,41 +81,46 @@ public class SubsystemConstants {
             //SPEED CONSTANTS
                 public static final double INDEXER_SPEED = 0;
                 public static final double HOPPER_SPEED = 0;
-
         }
 
         public static class ShooterSubsystemConstants{
-            public static final int APRILTAG_TARGET_FIDUCIALID = 0;
-            public static final int SHOOTER_ANGLE_ID = 23;
+            public static final int APRILTAG_TARGET_FIDUCIALID = 7;
+            public static final int SHOOTER_ANGLE_ID = 19;
             public static final int SHOOTER_ID_A = 13;
             public static final int SHOOTER_ID_B = 14;
             public static final int SHOOTER_ID_C = 15;
             public static final int SHOOTER_ID_D = 16;
             //PID - Angle
-                public static double SHOOTER_ANGLE_kP = 0;
-                public static double SHOOTER_ANGLE_kI = 0;
-                public static double SHOOTER_ANGLE_kD = 0;
+                public static double SHOOTER_ANGLE_kP = 0.275;
+                public static double SHOOTER_ANGLE_kI = 0.0;
+                public static double SHOOTER_ANGLE_kD = 0.0;
             //PID - Speed
-                public static double SHOOTER_SPEED_kP = 0;
+                public static double SHOOTER_SPEED_kP = 0.4;
                 public static double SHOOTER_SPEED_kI = 0;
-                public static double SHOOTER_SPEED_kD = 0;
+                public static double SHOOTER_SPEED_kD = 0.01;
             //FEEDFORWARD - Speed
                 public static double SHOOTER_SPEED_kS = 0;
-                public static double SHOOTER_SPEED_kV = 0;
+                public static double SHOOTER_SPEED_kV = 0.12625;
                 public static double SHOOTER_SPEED_kA = 0;
             //HARDWARE CONSTANTS
-                public static double KRAKEN2FLYWHEEL_GEAR_RATIO = 1.5; // 3 : 2, 3 rotations of the flywheel = 2 rotations of the kraken
-                public static double FLYWHEEL_RADIUS_METERS = Units.inchesToMeters(2);
-                public static double SHOOTER_ANGLE_OFFSET = 0;
+                public static final double FLYWHEEL_ROTATIONS_PER_MOTOR_ROTATION = 1.5;
+                    // Flywheel rotations per motor rotation.
+                    // Gear ratio is 3:2 (3 flywheel rotations for every 2 Kraken rotations).
+                public static final double NEO550_ROTATIONS_PER_HOOD_ROTATION = 187.5;
+                    // Motor rotations required for 1 degree of hood movement.
+                    // Gear ratio is 187.5 : 1( 0.00533333333 NEO550 rotations = 1 hood rotation).
+                public static final double NEO550_ROTATIONS_PER_HOOD_DEGREE = NEO550_ROTATIONS_PER_HOOD_ROTATION * 0.0317428;
+                    // Motor rotations required for 1 degree of hood movement.
+                public static final double SHOOTER_ANGLE_OFFSET = 63;
             //SHOOTER CONSTRAINTS
-                public static double MAX_ANGLE = 0;
-                public static double MIN_ANGLE = 0;
-                public static double SHOOTER_LOW_SPEED = 45;
-                public static double SHOOTER_HIGH_SPEED = 45;
+                public static double MAX_ANGLE = 44.5;
+                public static double MIN_ANGLE = 3.224;
+                public static double SHOOTER_LOW_SPEED = 0;
+                public static double SHOOTER_HIGH_SPEED = 25;
                 public static double DISTANCE_SHORT = 0;
                 public static double DISTANCE_FAR = 0;
-                public static double SPEED_TOLERANCE = 0;
-                public static double ANGLE_TOLERANCE = 0;
+                public static double SPEED_TOLERANCE = 0.3;
+                public static double ANGLE_TOLERANCE = 0.5;
             //PERIODIC CONSTANTS
                 public static boolean desiredVelReached = false;
                 public static boolean desiredAngleReached = false;

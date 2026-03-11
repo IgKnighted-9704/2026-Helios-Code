@@ -11,7 +11,7 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 
@@ -33,13 +33,12 @@ public class RobotContainer {
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
-    private final CommandPS4Controller joystick = new CommandPS4Controller(1);
     private final CommandXboxController joystick2 = new CommandXboxController(0);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
     //Subsystem Initialization
-        private final ShooterSubsystem shooterSS =  new ShooterSubsystem(false, false, drivetrain);
+        private final ShooterSubsystem shooterSS =  new ShooterSubsystem(true, true, drivetrain);
         private final HopperSubsystem hopperSS = new HopperSubsystem(false);
 
     public RobotContainer() {
@@ -49,18 +48,25 @@ public class RobotContainer {
     private void configureBindings() {
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
-        // drivetrain.setDefaultCommand(
-        //     // Drivetrain will execute this command periodically
-        //     drivetrain.applyRequest(() ->
-        //         drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.15) // Drive forward with negative Y (forward)
-        //             .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.2) // Drive left with negative X (left)
-        //             .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+        drivetrain.setDefaultCommand(
+            // Drivetrain will execute this command periodically
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.15) // Drive forward with negative Y (forward)
+                    .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.2) // Drive left with negative X (left)
+                    .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+            )
+        );
+
+        // joystick2.rightBumper().onTrue(
+        //     Commands.sequence(
+        //         shooterSS.setAngleAndVelocityCommand(25, 5), hopperSS.testCommand(true)
+        //     )
+        // ).onFalse(
+        //     Commands.sequence(
+        //         shooterSS.setAngleAndVelocityCommand(0, 0), hopperSS.testCommand(false)
         //     )
         // );
-
-        joystick2.rightBumper().whileTrue(shooterSS.testCommand(true)).onFalse(shooterSS.testCommand(false));
-        joystick2.leftBumper().whileTrue(hopperSS.testCommand(true)).onFalse(hopperSS.testCommand(false));
-
+        
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
@@ -68,10 +74,10 @@ public class RobotContainer {
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)   
         );
 
-        // joystick2.start().whileTrue(drivetrain.applyRequest(() -> brake));
-        // joystick2.a().whileTrue(drivetrain.applyRequest(() ->
-        //     point.withModuleDirection(new Rotation2d(-joystick2.getLeftY(), -joystick2.getLeftX()))
-        // ));
+        joystick2.start().whileTrue(drivetrain.applyRequest(() -> brake));
+        joystick2.a().whileTrue(drivetrain.applyRequest(() ->
+            point.withModuleDirection(new Rotation2d(-joystick2.getLeftY(), -joystick2.getLeftX()))
+        ));
 
         // Reset the field-centric heading on left bumper press.
         joystick2.y().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
@@ -82,6 +88,6 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        return drivetrain.getAuton("Auto PID");
+        return Commands.none();
     }
 }
