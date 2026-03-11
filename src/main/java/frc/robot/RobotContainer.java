@@ -38,7 +38,7 @@ public class RobotContainer {
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
     //Subsystem Initialization
-        private final ShooterSubsystem shooterSS =  new ShooterSubsystem(true, true, drivetrain);
+        private final ShooterSubsystem shooterSS =  new ShooterSubsystem(true, false, drivetrain);
         private final HopperSubsystem hopperSS = new HopperSubsystem(false);
 
     public RobotContainer() {
@@ -48,43 +48,53 @@ public class RobotContainer {
     private void configureBindings() {
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
-        drivetrain.setDefaultCommand(
-            // Drivetrain will execute this command periodically
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.15) // Drive forward with negative Y (forward)
-                    .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.2) // Drive left with negative X (left)
-                    .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
-            )
-        );
-
-        // joystick2.rightBumper().onTrue(
-        //     Commands.sequence(
-        //         shooterSS.setAngleAndVelocityCommand(25, 5), hopperSS.testCommand(true)
-        //     )
-        // ).onFalse(
-        //     Commands.sequence(
-        //         shooterSS.setAngleAndVelocityCommand(0, 0), hopperSS.testCommand(false)
+        // drivetrain.setDefaultCommand(
+        //     // Drivetrain will execute this command periodically
+        //     drivetrain.applyRequest(() ->
+        //         drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.15) // Drive forward with negative Y (forward)
+        //             .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.2) // Drive left with negative X (left)
+        //             .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
         //     )
         // );
         
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
-        RobotModeTriggers.disabled().whileTrue(
-            drivetrain.applyRequest(() -> idle).ignoringDisable(true)   
-        );
+        // RobotModeTriggers.disabled().whileTrue(
+        //     drivetrain.applyRequest(() -> idle).ignoringDisable(true)   
+        // );
 
-        joystick2.start().whileTrue(drivetrain.applyRequest(() -> brake));
-        joystick2.a().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-joystick2.getLeftY(), -joystick2.getLeftX()))
-        ));
+        // joystick2.start().whileTrue(drivetrain.applyRequest(() -> brake));
+        // joystick2.a().whileTrue(drivetrain.applyRequest(() ->
+        //     point.withModuleDirection(new Rotation2d(-joystick2.getLeftY(), -joystick2.getLeftX()))
+        // ));
 
         // Reset the field-centric heading on left bumper press.
-        joystick2.y().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
-
-
+        // joystick2.y().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
         drivetrain.registerTelemetry(logger::telemeterize);
+
+        // Shooter and Hopper Bindings
+            // Shooter
+                joystick2.rightBumper().whileTrue(
+                    Commands.parallel(
+                        Commands.runOnce(() ->
+                                {
+                                    shooterSS.enableComp = true;
+                                }
+                            ),
+                            hopperSS.testCommand(true)
+                    )
+                ).onFalse(
+                    Commands.parallel(
+                        Commands.runOnce(() ->
+                            {
+                                shooterSS.enableComp = true;
+                            }
+                        ),
+                        hopperSS.testCommand(false)
+                    )
+                );
     }
 
     public Command getAutonomousCommand() {

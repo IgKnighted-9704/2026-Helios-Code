@@ -58,6 +58,8 @@ public class SubsystemConstants {
                 public static final double SLIDER_OFFSET = 0;
                 public static final double ABS_ENC_2_INCHES_RATIO = 0;
 
+                public static final double STALL_SPEED = 0.1;
+
             //SPEED CONSTANTS
                 public static final double INTAKE_SPEED = 0;
                 public static final double OUTTAKE_SPEED = 0;
@@ -84,7 +86,10 @@ public class SubsystemConstants {
         }
 
         public static class ShooterSubsystemConstants{
-            public static final int APRILTAG_TARGET_FIDUCIALID = 7;
+            public static final int APRILTAG_RED_HUB_FIDUCIALID = 7;
+            public static final int APRILTAG_BLUE_HUB_FIDUCIALID = 8;
+            public static final int APRILTAG_RED_TRENCH_FIDUCIALID = 7;
+            public static final int APRILTAG_BLUE_TRENCH_FIDUCIALID = 8;
             public static final int SHOOTER_ANGLE_ID = 19;
             public static final int SHOOTER_ID_A = 13;
             public static final int SHOOTER_ID_B = 14;
@@ -122,7 +127,7 @@ public class SubsystemConstants {
                 public static double SPEED_TOLERANCE = 0.3;
                 public static double ANGLE_TOLERANCE = 0.5;
             //PERIODIC CONSTANTS
-                public static boolean desiredVelReached = false;
-                public static boolean desiredAngleReached = false;
+                public static boolean desiredVelReached = true;
+                public static boolean desiredAngleReached = true;
         }
 }

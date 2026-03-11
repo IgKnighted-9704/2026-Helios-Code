@@ -63,6 +63,7 @@ public class HopperSubsystem extends SubsystemBase{
             // indexStateEntry = HopperSubsystemTab.add("Current Index State", indexState.name()).getEntry();
             // desiredAngleReachedEntry = HopperSubsystemTab.add("Desired Angle Reached", desiredAngleReached).getEntry();
             // desiredVelReachedEntry = HopperSubsystemTab.add("desiredVelocityReached", desiredVelReached).getEntry();
+            // debugEntry = HopperSubsystemTab.add("Debug Field", "USE THIS FIELD FOR DEBUGGING").getEntry();
     }
 
     public void indexFuel(boolean runIndex){

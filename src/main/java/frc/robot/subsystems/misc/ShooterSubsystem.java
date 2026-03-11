@@ -12,7 +12,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -30,7 +29,7 @@ import frc.robot.subsystems.utility.LimelightHelpers.LimelightTarget_Fiducial;
 public class ShooterSubsystem extends SubsystemBase{
 
     //Type
-        boolean enableComp;
+        public boolean enableComp;
    
     //Shooter Motor
         private final TalonFX shooterA = new TalonFX(ShooterSubsystemConstants.SHOOTER_ID_A);
@@ -67,10 +66,15 @@ public class ShooterSubsystem extends SubsystemBase{
             private final GenericEntry subsystemStateEntry;
             private final GenericEntry visionStateEntry;
             private final GenericEntry degreedToAlignToTargEntry;
-            private GenericEntry shooterSpeed_kP;
-            private GenericEntry shooterSpeed_kD;
-            private GenericEntry shooterSpeed_kV;
-
+            private final GenericEntry shooterSpeed_kP;
+            private final GenericEntry shooterSpeed_kD;
+            private final GenericEntry shooterSpeed_kV;
+            private final GenericEntry shooterAngle_kP;
+            private final GenericEntry shooterAngle_kI;
+            private final GenericEntry shooterAngle_kD;
+            private final GenericEntry desiredVelReachedEntry;
+            private final GenericEntry desiredAngleReachedEntry;
+            private final GenericEntry debugEntry;
 
     //Tracker Variables
        private boolean enableSubsystem;
@@ -115,6 +119,12 @@ public class ShooterSubsystem extends SubsystemBase{
                 shooterSpeed_kP = ShooterSubsystemTab.add("SHOOTER KP", shooterVelConfigs.kP).getEntry();
                 shooterSpeed_kD = ShooterSubsystemTab.add("SHOOTER KD", shooterVelConfigs.kD).getEntry();
                 shooterSpeed_kV = ShooterSubsystemTab.add("SHOOTER KV", shooterVelConfigs.kV).getEntry();
+                shooterAngle_kP = ShooterSubsystemTab.add("SHOOTER ANGLE KP", shooterAnglePID.getP()).getEntry();
+                shooterAngle_kI = ShooterSubsystemTab.add("SHOOTER ANGLE KI", shooterAnglePID.getI()).getEntry();
+                shooterAngle_kD = ShooterSubsystemTab.add("SHOOTER ANGLE KD", shooterAnglePID.getD()).getEntry();
+                desiredVelReachedEntry = ShooterSubsystemTab.add("Desired Velocity Reached", true).getEntry();
+                desiredAngleReachedEntry = ShooterSubsystemTab.add("Desired Angle Reached", true).getEntry();
+                debugEntry = ShooterSubsystemTab.add("Debug Field", "USE THIS FIELD FOR DEBUGGING").getEntry();
        }
 
     //Utility Methods
@@ -156,7 +166,6 @@ public class ShooterSubsystem extends SubsystemBase{
         public double getDegreesToAlignToTarget(){
             return degreesToAlignToTarget;
         }
-
 
         public double generateVelocityRPS(double distance){
             // Base velocity based on distance
@@ -226,7 +235,11 @@ public class ShooterSubsystem extends SubsystemBase{
                 LimelightResults results = LimelightHelpers.getLatestResults(Vision.CAM_LIMELIGHT);
                 if(results.targets_Fiducials.length > 0){
                     for(LimelightTarget_Fiducial tag : results.targets_Fiducials){
-                        if(tag.fiducialID == ShooterSubsystemConstants.APRILTAG_TARGET_FIDUCIALID){
+                        if(tag.fiducialID == ShooterSubsystemConstants.APRILTAG_RED_HUB_FIDUCIALID || 
+                           tag.fiducialID == ShooterSubsystemConstants.APRILTAG_BLUE_HUB_FIDUCIALID ||
+                           tag.fiducialID == ShooterSubsystemConstants.APRILTAG_RED_TRENCH_FIDUCIALID ||
+                           tag.fiducialID == ShooterSubsystemConstants.APRILTAG_BLUE_TRENCH_FIDUCIALID
+                        ){
                             Pose3d targetPose = tag.getTargetPose_CameraSpace();
                                 target_distance = Math.abs(targetPose.getX()/Vision.LL_X_MULTIPLIER);
                                 target_height = Math.abs(targetPose.getZ()/Vision.LL_Z_MULTIPLIER);
@@ -237,8 +250,8 @@ public class ShooterSubsystem extends SubsystemBase{
                         }
                     }
                 if(foundTarget){
-                  setDesiredVelocityRPS(target_height * 20);
-                  setDesired_Angle(0);
+                  setDesiredVelocityRPS(generateVelocityRPS(target_distance));
+                  setDesired_Angle(generateAngle(target_distance, target_height));
                 } else {
                   setDesiredVelocityRPS(0);
                   setDesired_Angle(0 );
@@ -246,14 +259,50 @@ public class ShooterSubsystem extends SubsystemBase{
             }
             //Data
                 currentVelEntry.setDouble(getShooterVelocityRPS());
-                desiredVelEntry.setDouble(desired_VelocityRPS);
+                // desiredVelEntry.setDouble(desired_VelocityRPS);
                 currentAngleEntry.setDouble(getShooterAngleDegrees());
-                desiredAngleEntry.setDouble(desired_Angle);
+                // desiredAngleEntry.setDouble(desired_Angle);
                 targetDistanceEntry.setDouble(target_distance);
                 targetHeightEntry.setDouble(target_height);
                 subsystemStateEntry.setBoolean(enableSubsystem);
                 visionStateEntry.setBoolean(enableVision);
                 degreedToAlignToTargEntry.setDouble(degreesToAlignToTarget);
+                shooterSpeed_kP.setDouble(shooterVelConfigs.kP);
+                shooterSpeed_kD.setDouble(shooterVelConfigs.kD);
+                shooterSpeed_kV.setDouble(shooterVelConfigs.kV);
+                shooterAngle_kP.setDouble(shooterAnglePID.getP());
+                shooterAngle_kI.setDouble(shooterAnglePID.getI());
+                shooterAngle_kD.setDouble(shooterAnglePID.getD());
+                desiredVelReachedEntry.setBoolean(ShooterSubsystemConstants.desiredVelReached);
+                desiredAngleReachedEntry.setBoolean(ShooterSubsystemConstants.desiredAngleReached);
+                debugEntry.setString("USE THIS FIELD FOR DEBUGGING");
+            
+            //Physics Lab
+                if(enableComp){
+                    desired_VelocityRPS = desiredVelEntry.getDouble(0);
+                    desired_Angle = desiredAngleEntry.getDouble(ShooterSubsystemConstants.MIN_ANGLE);
+                } 
+
+            //PID + FF Tuning
+                //Speed
+                    if(shooterVelConfigs.kP != shooterSpeed_kP.getDouble(shooterVelConfigs.kP) ||
+                       shooterVelConfigs.kD != shooterSpeed_kD.getDouble(shooterVelConfigs.kD) ||
+                       shooterVelConfigs.kV != shooterSpeed_kV.getDouble(shooterVelConfigs.kV)){
+                        shooterVelConfigs.kP = shooterSpeed_kP.getDouble(shooterVelConfigs.kP);
+                        shooterVelConfigs.kD = shooterSpeed_kD.getDouble(shooterVelConfigs.kD);
+                        shooterVelConfigs.kV = shooterSpeed_kV.getDouble(shooterVelConfigs.kV);
+                        shooterA.getConfigurator().apply(shooterVelConfigs);
+                    }
+                //Angle
+                    if(shooterAnglePID.getP() != ShooterSubsystemConstants.SHOOTER_ANGLE_kP ||
+                       shooterAnglePID.getI() != ShooterSubsystemConstants.SHOOTER_ANGLE_kI ||
+                       shooterAnglePID.getD() != ShooterSubsystemConstants.SHOOTER_ANGLE_kD){
+                        shooterAnglePID.setPID(
+                            shooterAngle_kP.getDouble(ShooterSubsystemConstants.SHOOTER_ANGLE_kP), 
+                            shooterAngle_kI.getDouble(ShooterSubsystemConstants.SHOOTER_ANGLE_kI), 
+                            shooterAngle_kD.getDouble(ShooterSubsystemConstants.SHOOTER_ANGLE_kD)
+                        );
+                    }
             }
     }
 }
