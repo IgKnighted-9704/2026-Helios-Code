@@ -5,9 +5,8 @@ import edu.wpi.first.math.util.Units;
 public class SubsystemConstants {
 
         public static class LightSensor{
-            public static final int INTAKE_SENSOR_ID = 0;
-            public static final int INDEXER_SENSOR_ID = 1;
-            public static final int HOPPER_MAX_LIMIT_SENSOR_ID = 2;
+            public static final int INDEXER_SENSOR_ID_A = 8;
+            public static final int INDEXER_SENSOR_ID_B = 9;
         }
 
         public static class Vision{
@@ -61,8 +60,8 @@ public class SubsystemConstants {
                 public static final double STALL_SPEED = 0.1;
 
             //SPEED CONSTANTS
-                public static final double INTAKE_SPEED = 0;
-                public static final double OUTTAKE_SPEED = 0;
+                public static final double INTAKE_SPEED = 0.5;
+                public static final double OUTTAKE_SPEED = 0.5;
 
             //PID - Slider
                 public static double INTAKE_SLIDER_kP = 0;
@@ -125,6 +124,7 @@ public class SubsystemConstants {
                 public static double DISTANCE_SHORT = 0;
                 public static double DISTANCE_FAR = 0;
                 public static double SPEED_TOLERANCE = 0.3;
+                public static double FLYWHEEL_RADIUS_METERS = Units.inchesToMeters(2);
                 public static double ANGLE_TOLERANCE = 0.5;
             //PERIODIC CONSTANTS
                 public static boolean desiredVelReached = true;

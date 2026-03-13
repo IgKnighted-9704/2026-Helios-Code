@@ -43,7 +43,7 @@ public class ShooterSubsystem extends SubsystemBase{
         private final VelocityVoltage m_velocity = new VelocityVoltage(0);
         private final Slot0Configs shooterVelConfigs = 
             new Slot0Configs().
-            withKP(ShooterSubsystemConstants.SHOOTER_SPEED_kP).
+            withKP(ShooterSubsystemConstants.SHOOTER_SPEED_kP). 
             withKD(ShooterSubsystemConstants.SHOOTER_SPEED_kD).
             withKV(ShooterSubsystemConstants.SHOOTER_SPEED_kV);
     //Shooter Angle - PID 
@@ -79,14 +79,12 @@ public class ShooterSubsystem extends SubsystemBase{
     //Tracker Variables
        private boolean enableSubsystem;
        private boolean enableVision;
-       private double desired_VelocityRPS;
+       private double desired_Velocity;
        private double desired_Angle;
        private double target_distance;
        private double target_height;
 
-       public ShooterSubsystem(boolean enableComp, boolean enableVision, CommandSwerveDrivetrain drivetrain){
-            //Type
-                this.enableComp = enableComp;
+       public ShooterSubsystem(boolean enableVision, CommandSwerveDrivetrain drivetrain){
 
             //Coniguring Motors
                 shooterA.getConfigurator().apply(shooterVelConfigs);
@@ -101,7 +99,7 @@ public class ShooterSubsystem extends SubsystemBase{
             //Initializing Tracker Variables
                 enableSubsystem = true;
                 this.enableVision = enableVision;
-                desired_VelocityRPS = 0.0;
+                desired_Velocity = 0.0;
                 desired_Angle = 0.0;
                 target_distance = 0.0;
                 target_height = 0.0;
@@ -128,9 +126,9 @@ public class ShooterSubsystem extends SubsystemBase{
        }
 
     //Utility Methods
-        private double getShooterVelocityRPS(){
+        private double getShooterFlywheelVelocity(){
             return 
-                shooterA.getVelocity().getValueAsDouble()/ ShooterSubsystemConstants.FLYWHEEL_ROTATIONS_PER_MOTOR_ROTATION;
+                shooterA.getVelocity().getValueAsDouble() * ShooterSubsystemConstants.FLYWHEEL_ROTATIONS_PER_MOTOR_ROTATION * 2 * Math.PI * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS ;
         }
 
         private double getShooterAngleDegrees(){
@@ -149,12 +147,12 @@ public class ShooterSubsystem extends SubsystemBase{
             enableVision = true;
         }
 
-        public void setDesiredVelocityRPS(double velocity){
-            desired_VelocityRPS = velocity;
+        public void setDesiredFlywheelVelocity(double velocity){
+            desired_Velocity = velocity;
         }
 
-        public double getDesiredVelocityRPS(){
-            return desired_VelocityRPS;
+        public double getDesiredFlywheelVelocity(){
+            return desired_Velocity;
         }
 
         public void setDesired_Angle(double angle){
@@ -167,22 +165,8 @@ public class ShooterSubsystem extends SubsystemBase{
             return degreesToAlignToTarget;
         }
 
-        public double generateVelocityRPS(double distance){
-            // Base velocity based on distance
-            double baseVelocity = (distance < ShooterSubsystemConstants.DISTANCE_SHORT)
-                ? ShooterSubsystemConstants.SHOOTER_LOW_SPEED
-                : ShooterSubsystemConstants.SHOOTER_HIGH_SPEED;
-
-            // Get robot forward/backward velocity (toward target)
-            double robotForwardVel = drivetrain.getState().Speeds.vyMetersPerSecond;
-
-            // Compensate shooter speed for robot motion
-            double correctedVelocity = baseVelocity - robotForwardVel;
-
-            // Clamp to valid range
-            correctedVelocity = MathUtil.clamp(correctedVelocity, 0, ShooterSubsystemConstants.SHOOTER_HIGH_SPEED);
-
-            return correctedVelocity;
+        public double generateShooterFlywheelVelocity(double distance, double height){
+            return 0;
         }
 
         public double generateAngle(double distance, double height){
@@ -203,11 +187,11 @@ public class ShooterSubsystem extends SubsystemBase{
                     });
         }
 
-        public Command setAngleAndVelocityCommand(double angle, double velocityRPS){
+        public Command setAngleAndVelocityCommand(double angle, double velocity){
             if(!enableVision){
                 return Commands.runOnce(()->{
                         this.setDesired_Angle(angle);
-                        this.setDesiredVelocityRPS(velocityRPS);
+                        this.setDesiredFlywheelVelocity(velocity);
                 });
             }
             return Commands.none();
@@ -218,15 +202,15 @@ public class ShooterSubsystem extends SubsystemBase{
         if(enableSubsystem && enableComp){
             //Shooter Speed 
                 m_velocity.Slot = 0;
-                double rps = desired_VelocityRPS * ShooterSubsystemConstants.FLYWHEEL_ROTATIONS_PER_MOTOR_ROTATION;
-                    shooterA.setControl(m_velocity.withVelocity(rps));
+                double motorRps = desired_Velocity /(2 * Math.PI * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.FLYWHEEL_ROTATIONS_PER_MOTOR_ROTATION);
+                    shooterA.setControl(m_velocity.withVelocity(motorRps));
 
             //Shooter Angle
                 double anglePID = shooterAnglePID.calculate(getShooterAngleDegrees(), MathUtil.clamp(desired_Angle, ShooterSubsystemConstants.MIN_ANGLE, ShooterSubsystemConstants.MAX_ANGLE));
                     shooterAngle.setVoltage(MathUtil.clamp(anglePID, -12, 12));
             //Set Global Constants
                 ShooterSubsystemConstants.desiredVelReached = 
-                    desired_VelocityRPS != 0 ? Math.abs(desired_VelocityRPS-getShooterVelocityRPS()) < ShooterSubsystemConstants.SPEED_TOLERANCE : false;
+                    desired_Velocity != 0 ? Math.abs(desired_Velocity-getShooterFlywheelVelocity()) < ShooterSubsystemConstants.SPEED_TOLERANCE : false;
                 ShooterSubsystemConstants.desiredAngleReached = 
                      desired_Angle != 0 ? Math.abs(desired_Angle-getShooterAngleDegrees()) < ShooterSubsystemConstants.ANGLE_TOLERANCE : false;
             //Vision
@@ -250,15 +234,15 @@ public class ShooterSubsystem extends SubsystemBase{
                         }
                     }
                 if(foundTarget){
-                  setDesiredVelocityRPS(generateVelocityRPS(target_distance));
+                  setDesiredFlywheelVelocity(generateShooterFlywheelVelocity(target_distance, target_height));
                   setDesired_Angle(generateAngle(target_distance, target_height));
                 } else {
-                  setDesiredVelocityRPS(0);
+                  setDesiredFlywheelVelocity(0);
                   setDesired_Angle(0 );
                 }
             }
             //Data
-                currentVelEntry.setDouble(getShooterVelocityRPS());
+                currentVelEntry.setDouble(getShooterFlywheelVelocity());
                 // desiredVelEntry.setDouble(desired_VelocityRPS);
                 currentAngleEntry.setDouble(getShooterAngleDegrees());
                 // desiredAngleEntry.setDouble(desired_Angle);
@@ -278,9 +262,11 @@ public class ShooterSubsystem extends SubsystemBase{
                 debugEntry.setString("USE THIS FIELD FOR DEBUGGING");
             
             //Physics Lab
+            double speed = desiredVelEntry.getDouble(0);
+            double angle =  desiredAngleEntry.getDouble(ShooterSubsystemConstants.MIN_ANGLE);;
                 if(enableComp){
-                    desired_VelocityRPS = desiredVelEntry.getDouble(0);
-                    desired_Angle = desiredAngleEntry.getDouble(ShooterSubsystemConstants.MIN_ANGLE);
+                    desired_Velocity = speed;
+                    desired_Angle = angle;
                 } 
 
             //PID + FF Tuning

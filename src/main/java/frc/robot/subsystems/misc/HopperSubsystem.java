@@ -15,10 +15,6 @@ import frc.robot.subsystems.utility.Sensors;
 
 public class HopperSubsystem extends SubsystemBase{
 
-    //Type
-        boolean enableComp;
-        boolean enableTest = false;
-
     //Hopper Motors
         private final SparkMax hopperMotorA = new SparkMax( HopperSubsystemConstants.HOPPER_ID_A, com.revrobotics.spark.SparkLowLevel.MotorType.kBrushless);
         private final SparkMax hopperMotorB = new SparkMax( HopperSubsystemConstants.HOPPER_ID_B, com.revrobotics.spark.SparkLowLevel.MotorType.kBrushless);
@@ -43,14 +39,12 @@ public class HopperSubsystem extends SubsystemBase{
         private GenericEntry indexStateEntry;
         private GenericEntry desiredVelReachedEntry;
         private GenericEntry desiredAngleReachedEntry;
+        private GenericEntry debugEntry;
     
     //Sensors 
         Sensors sensors = new Sensors();
     
     public HopperSubsystem(boolean enableComp){
-
-        //Type
-            this.enableComp = enableComp;
 
         //Tracker Variables
             fuelDetectedIndexer = false;
@@ -59,22 +53,28 @@ public class HopperSubsystem extends SubsystemBase{
             desiredAngleReached = ShooterSubsystemConstants.desiredAngleReached;
     
         //Data
-            // fuelDetectedIndexerEntry = HopperSubsystemTab.add("Fuel Detected Indexer", false).getEntry();
-            // indexStateEntry = HopperSubsystemTab.add("Current Index State", indexState.name()).getEntry();
-            // desiredAngleReachedEntry = HopperSubsystemTab.add("Desired Angle Reached", desiredAngleReached).getEntry();
-            // desiredVelReachedEntry = HopperSubsystemTab.add("desiredVelocityReached", desiredVelReached).getEntry();
-            // debugEntry = HopperSubsystemTab.add("Debug Field", "USE THIS FIELD FOR DEBUGGING").getEntry();
+            fuelDetectedIndexerEntry = HopperSubsystemTab.add("Fuel Detected Indexer", false).getEntry();
+            indexStateEntry = HopperSubsystemTab.add("Current Index State", indexState.name()).getEntry();
+            desiredAngleReachedEntry = HopperSubsystemTab.add("Desired Angle Reached", desiredAngleReached).getEntry();
+            desiredVelReachedEntry = HopperSubsystemTab.add("desiredVelocityReached", desiredVelReached).getEntry();
+            debugEntry = HopperSubsystemTab.add("Debug Field", "USE THIS FIELD FOR DEBUGGING").getEntry();
     }
 
     public void indexFuel(boolean runIndex){
         hopperMotorA.set(HopperSubsystemConstants.HOPPER_SPEED);
         hopperMotorB.set(HopperSubsystemConstants.HOPPER_SPEED);
+    }
+
+    public void kickFuel(){
         kickerMotor.set(HopperSubsystemConstants.INDEXER_SPEED);
     }
     
     public void stopIndex(){
         hopperMotorA.set(0);
         hopperMotorB.set(0);
+    }
+
+    public void stopKickFuel(){
         kickerMotor.set(0);
     }
 
@@ -87,47 +87,31 @@ public class HopperSubsystem extends SubsystemBase{
         });
     }
 
-    //TEST
-        public Command testCommand(boolean testShooter){
-            return Commands.runOnce(()->{
-                  enableTest = testShooter;
-            });
-        }
-
-
 
     @Override
     public void periodic(){
-        // //Update Tracker Variables
-        //     fuelDetectedIndexer = sensors.getIndexSensor();
-        //     indexState = STATE.AUTO;
-        //     desiredVelReached = ShooterSubsystemConstants.desiredVelReached;
-        //     desiredAngleReached = ShooterSubsystemConstants.desiredAngleReached;
-        // //Data
-        //     fuelDetectedIndexerEntry.setBoolean(fuelDetectedIndexer);
-        //     indexStateEntry.setString(indexState.name());
-        //     desiredVelReachedEntry.setBoolean(desiredVelReached);
-        //     desiredAngleReachedEntry.setBoolean(desiredAngleReached);
+        //Update Tracker Variables
+            fuelDetectedIndexer = sensors.getIndexSensorA() && sensors.getIndexSensorB();
+            indexState = STATE.AUTO;
+            desiredVelReached = ShooterSubsystemConstants.desiredVelReached;
+            desiredAngleReached = ShooterSubsystemConstants.desiredAngleReached;
+        //Data
+            fuelDetectedIndexerEntry.setBoolean(fuelDetectedIndexer);
+            indexStateEntry.setString(indexState.name());
+            desiredVelReachedEntry.setBoolean(desiredVelReached);
+            desiredAngleReachedEntry.setBoolean(desiredAngleReached);
 
-        // //Index Based On State Input
-        // if(indexState == STATE.AUTO){
-        //     if(fuelDetectedIndexer && desiredVelReached && desiredAngleReached){
-        //         indexFuel(true);
-        //     } else {
-        //         stopIndex();
-        //     }
-        // } else if (indexState == STATE.MANUAL) {
-        //     if(fuelDetectedIndexer){
-        //         indexFuel(indexManually);
-        //     }
-        // }
-
-        if(!enableComp && enableTest){
-                double speed = 0.2;
-                kickerMotor.set(speed);
+        //Index Based On State Input
+        if(indexState == STATE.AUTO){
+            if(desiredVelReached && desiredAngleReached){
+                indexFuel(true);
             } else {
-                kickerMotor.stopMotor();
+                stopIndex();
             }
+        } else if (indexState == STATE.MANUAL) {
+            if(fuelDetectedIndexer){
+                indexFuel(indexManually);
+            }
+        }
     }
-
 }
