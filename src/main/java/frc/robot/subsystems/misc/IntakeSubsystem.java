@@ -22,13 +22,13 @@ public class IntakeSubsystem extends SubsystemBase {
         private final SparkMax intakeSliderMotor = new SparkMax(IntakeSubsystemConstants.INTAKE_PIVOT_MOTOR_ID, com.revrobotics.spark.SparkLowLevel.MotorType.kBrushless);
     
     //State Machine
-        private enum STATE{
+        public enum IntakeSSTATE{
             INTAKE_STATE, OUTTAKE_STATE, STOW_STATE;
         }
     
     //Tracker Variables
-        private STATE currentState;
-        private STATE desiredState;
+        private IntakeSSTATE currentState;
+        private IntakeSSTATE desiredState;
 
     //Data
         private ShuffleboardTab IntakeSubsystemTab = Shuffleboard.getTab("Intake Subsystem Tab");
@@ -41,8 +41,8 @@ public class IntakeSubsystem extends SubsystemBase {
     public IntakeSubsystem(){
 
         //Initializing Tracker Variables
-            currentState = STATE.STOW_STATE;
-            desiredState = STATE.STOW_STATE;
+            currentState = IntakeSSTATE.STOW_STATE;
+            desiredState = IntakeSSTATE.STOW_STATE;
         
         // Initializing Shuffleboard Entries
             desiredStateEntry = IntakeSubsystemTab.add("Desired Intake State", desiredState.name()).getEntry();
@@ -64,36 +64,63 @@ public class IntakeSubsystem extends SubsystemBase {
         }
 
     //Command Based methods
-        public Command intakeCommand(){
-            return Commands.runOnce(()->{
-                desiredState = STATE.INTAKE_STATE;
-            });
-        }
-        public Command outtakeCommand(){
-            return Commands.runOnce(()->{
-                desiredState = STATE.OUTTAKE_STATE;
-            });
-        }
-        public Command stowCommand(){
-            return Commands.runOnce(()->{
-                desiredState = STATE.STOW_STATE;
-            });
-        }
 
-        public Command intakeOuttakeSliderCommand(){
-            return Commands.sequence(
-              Commands.runOnce(()->{
-                intakeSliderMotor.set(0.25);
-               }),
-               Commands.waitUntil(()->
-                isIntakeSliderStall()
-               ),
-               Commands.runOnce(()->{
-                intakeSliderMotor.set(0);
-               })
+        public Command intakeCommand(){
+            return Commands.parallel(
+                Commands.runOnce(()->{
+                    desiredState = IntakeSSTATE.INTAKE_STATE;
+                }),
+                Commands.sequence(
+                    Commands.runOnce(()->{
+                        intakeSliderMotor.set(0.25);
+                    }),
+                    Commands.waitUntil(()->
+                        isIntakeSliderStall()
+                    ),
+                    Commands.runOnce(()->{
+                        intakeSliderMotor.set(0);
+                    })
+                )
             );
         }
 
+        public Command outtakeCommand(){
+            return Commands.parallel(
+                Commands.runOnce(()->{
+                    desiredState = IntakeSSTATE.OUTTAKE_STATE;
+                }),
+                Commands.sequence(
+                    Commands.runOnce(()->{
+                        intakeSliderMotor.set(0.25);
+                    }),
+                    Commands.waitUntil(()->
+                        isIntakeSliderStall()
+                    ),
+                    Commands.runOnce(()->{
+                        intakeSliderMotor.set(0);
+                    })
+                )
+            );
+        }
+
+        public Command stowCommand(){
+            return Commands.parallel(
+                Commands.runOnce(()->{
+                    desiredState = IntakeSSTATE.STOW_STATE;
+                }),
+                Commands.sequence(
+                    Commands.runOnce(()->{
+                        intakeSliderMotor.set(-0.25);
+                    }),
+                    Commands.waitUntil(()->
+                        isIntakeSliderStall()
+                    ),
+                    Commands.runOnce(()->{
+                        intakeSliderMotor.set(0);
+                    })
+                )
+            );
+        }
         public Command stowSliderCommand(){
             return Commands.sequence(
               Commands.runOnce(()->{
@@ -112,16 +139,15 @@ public class IntakeSubsystem extends SubsystemBase {
     @Override
         public void periodic(){
             //STATE MACHINE
-                // SET DESIRED INTAKE ANGLES
-                    if(desiredState == STATE.STOW_STATE && currentState != STATE.STOW_STATE){
+                    if(desiredState == IntakeSSTATE.STOW_STATE && currentState != IntakeSSTATE.STOW_STATE){
                         intakeMotor.set(0);
-                        currentState = STATE.STOW_STATE;
-                    } else if (desiredState == STATE.INTAKE_STATE && currentState != STATE.INTAKE_STATE){
+                        currentState = IntakeSSTATE.STOW_STATE;
+                    } else if (desiredState == IntakeSSTATE.INTAKE_STATE && currentState != IntakeSSTATE.INTAKE_STATE){
                         intake();
-                        currentState = STATE.INTAKE_STATE;
-                    } else if (desiredState == STATE.OUTTAKE_STATE && currentState != STATE.OUTTAKE_STATE){
+                        currentState = IntakeSSTATE.INTAKE_STATE;
+                    } else if (desiredState == IntakeSSTATE.OUTTAKE_STATE && currentState != IntakeSSTATE.OUTTAKE_STATE){
                          outtake();
-                        currentState = STATE.OUTTAKE_STATE;
+                        currentState = IntakeSSTATE.OUTTAKE_STATE;
                     }
             //Data
                 currentStateEntry.setString(currentState.name());

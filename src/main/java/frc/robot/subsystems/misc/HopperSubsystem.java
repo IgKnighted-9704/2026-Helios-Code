@@ -23,13 +23,13 @@ public class HopperSubsystem extends SubsystemBase{
         private final TalonFX kickerMotor = new TalonFX(HopperSubsystemConstants.KICKER_MOTOR_ID);
 
     // STATE MACHINES
-        private enum STATE {
-            AUTO, MANUAL
+        public enum HOPPERSTATE {
+            RUN, STOW
         }
     //Tracker Variables
         private boolean fuelDetectedIndexer;
-        private STATE indexState;
-        private boolean indexManually;
+        private HOPPERSTATE kickState;
+        private boolean kickManually;
         private boolean desiredVelReached;
         private boolean desiredAngleReached;
     
@@ -39,25 +39,23 @@ public class HopperSubsystem extends SubsystemBase{
         private GenericEntry indexStateEntry;
         private GenericEntry desiredVelReachedEntry;
         private GenericEntry desiredAngleReachedEntry;
-        private GenericEntry debugEntry;
     
     //Sensors 
         Sensors sensors = new Sensors();
     
-    public HopperSubsystem(boolean enableComp){
+    public HopperSubsystem(){
 
         //Tracker Variables
             fuelDetectedIndexer = false;
-            indexState = STATE.AUTO;
+            kickState = HOPPERSTATE.STOW;
             desiredVelReached = ShooterSubsystemConstants.desiredVelReached;
             desiredAngleReached = ShooterSubsystemConstants.desiredAngleReached;
     
         //Data
             fuelDetectedIndexerEntry = HopperSubsystemTab.add("Fuel Detected Indexer", false).getEntry();
-            indexStateEntry = HopperSubsystemTab.add("Current Index State", indexState.name()).getEntry();
+            indexStateEntry = HopperSubsystemTab.add("Current Index State", kickState.name()).getEntry();
             desiredAngleReachedEntry = HopperSubsystemTab.add("Desired Angle Reached", desiredAngleReached).getEntry();
             desiredVelReachedEntry = HopperSubsystemTab.add("desiredVelocityReached", desiredVelReached).getEntry();
-            debugEntry = HopperSubsystemTab.add("Debug Field", "USE THIS FIELD FOR DEBUGGING").getEntry();
     }
 
     public void indexFuel(boolean runIndex){
@@ -78,11 +76,11 @@ public class HopperSubsystem extends SubsystemBase{
         kickerMotor.set(0);
     }
 
-    public Command setIndexState(STATE state){
+    public Command setKickState(HOPPERSTATE state){
         return Commands.runOnce(()->{
-            this.indexState = state;
-            if(indexState == STATE.MANUAL){
-                indexManually = true;
+            this.kickState = state;
+            if(kickState == HOPPERSTATE.STOW){
+                kickManually = true;
             }
         });
     }
@@ -92,26 +90,26 @@ public class HopperSubsystem extends SubsystemBase{
     public void periodic(){
         //Update Tracker Variables
             fuelDetectedIndexer = sensors.getIndexSensorA() && sensors.getIndexSensorB();
-            indexState = STATE.AUTO;
+            kickState = HOPPERSTATE.RUN;
             desiredVelReached = ShooterSubsystemConstants.desiredVelReached;
             desiredAngleReached = ShooterSubsystemConstants.desiredAngleReached;
         //Data
             fuelDetectedIndexerEntry.setBoolean(fuelDetectedIndexer);
-            indexStateEntry.setString(indexState.name());
+            indexStateEntry.setString(kickState.name());
             desiredVelReachedEntry.setBoolean(desiredVelReached);
             desiredAngleReachedEntry.setBoolean(desiredAngleReached);
 
         //Index Based On State Input
-        if(indexState == STATE.AUTO){
-            if(desiredVelReached && desiredAngleReached){
-                indexFuel(true);
+        if(kickState == HOPPERSTATE.RUN){
+            indexFuel(true);
+            if(desiredVelReached && desiredAngleReached && fuelDetectedIndexer){
+                kickFuel();
             } else {
-                stopIndex();
+                stopKickFuel();
             }
-        } else if (indexState == STATE.MANUAL) {
-            if(fuelDetectedIndexer){
-                indexFuel(indexManually);
-            }
+        } else if (kickState == HOPPERSTATE.STOW){
+            indexFuel(false);
+            stopKickFuel();
         }
     }
 }

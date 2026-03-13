@@ -8,8 +8,6 @@ import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
-
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -18,7 +16,9 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.Constants.TunerConstants;
 import frc.robot.commands.CommandSwerveDrivetrain;
 import frc.robot.subsystems.misc.HopperSubsystem;
+import frc.robot.subsystems.misc.IntakeSubsystem;
 import frc.robot.subsystems.misc.ShooterSubsystem;
+import frc.robot.subsystems.misc.HopperSubsystem.HOPPERSTATE;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired tp speed
@@ -29,13 +29,15 @@ public class RobotContainer {
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.Velocity); // Use open-loop control for drive motors
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
-    private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
     private final CommandXboxController joystick2 = new CommandXboxController(0);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    public final ShooterSubsystem shoterSS = new ShooterSubsystem(false, drivetrain);
+    public final IntakeSubsystem intakeSS = new IntakeSubsystem();
+    public final HopperSubsystem hopperSS = new HopperSubsystem();
 
     //Subsystem Initialization
         // private final ShooterSubsystem shooterSS =  new ShooterSubsystem(true, false, drivetrain);
@@ -46,55 +48,48 @@ public class RobotContainer {
     }
 
     private void configureBindings() {
-        // Note that X is defined as forward according to WPILib convention,
-        // and Y is defined as to the left according to WPILib convention.
-        drivetrain.setDefaultCommand(
-            // Drivetrain will execute this command periodically
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.75) // Drive forward with negative Y (forward)
-                    .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.2) // Drive left with negative X (left)
-                    .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
-            )
-        );
         
-        // Idle while the robot is disabled. This ensures the configured
-        // neutral mode is applied to the drive motors while disabled.
-        final var idle = new SwerveRequest.Idle();
-        RobotModeTriggers.disabled().whileTrue(
-            drivetrain.applyRequest(() -> idle).ignoringDisable(true)   
-        );
+        //DRIVE SUBSYSTEM
+            // Note that X is defined as forward according to WPILib convention,
+            // and Y is defined as to the left according to WPILib convention.
+                drivetrain.setDefaultCommand(
+                    // Drivetrain will execute this command periodically
+                    drivetrain.applyRequest(() ->
+                        drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.75) // Drive forward with negative Y (forward)
+                            .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.75) // Drive left with negative X (left)
+                            .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+                    )
+                );
+            
+            // Idle while the robot is disabled. This ensures the configured
+            // neutral mode is applied to the drive motors while disabled.
+                final var idle = new SwerveRequest.Idle();
+                RobotModeTriggers.disabled().whileTrue(
+                    drivetrain.applyRequest(() -> idle).ignoringDisable(true)   
+                );
 
-        joystick2.start().whileTrue(drivetrain.applyRequest(() -> brake));
-        joystick2.a().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-joystick2.getLeftY(), -joystick2.getLeftX()))
-        ));
+            //Drive Train Break
+                joystick2.start().whileTrue(drivetrain.applyRequest(() -> brake));
 
-        // Reset the field-centric heading on left bumper press.
-        joystick2.y().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+            // Reset the field-centric heading on left bumper press.
+                joystick2.y().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
-        drivetrain.registerTelemetry(logger::telemeterize);
+            drivetrain.registerTelemetry(logger::telemeterize);
 
-        // Shooter and Hopper Bindings
-            // Shooter
-                // joystick2.rightBumper().whileTrue(
-                //     Commands.parallel(
-                //         Commands.runOnce(() ->
-                //                 {
-                //                     shooterSS.enableComp = true;
-                //                 }
-                //             ),
-                //             hopperSS.testCommand(true)
-                //     )
-                // ).onFalse(
-                //     Commands.parallel(
-                //         Commands.runOnce(() ->
-                //             {
-                //                 shooterSS.enableComp = true;
-                //             }
-                //         ),
-                //         hopperSS.testCommand(false)
-                //     )
-                // );
+        //IntakeSubsystem 
+            joystick2.rightBumper().whileTrue(intakeSS.intakeCommand()).whileFalse(intakeSS.stowCommand());
+            joystick2.leftBumper().whileTrue(intakeSS.outtakeCommand()).whileFalse(intakeSS.stowCommand());
+        //Hopper Subsystem
+            joystick2.povUp().whileTrue(hopperSS.setKickState(HOPPERSTATE.RUN)).onFalse(hopperSS.setKickState(HOPPERSTATE.STOW));
+        //Shooter Subsystem
+            // joystick2.rightTrigger().whileTrue(shoterSS.enableSubsystemCommand()).onFalse(shoterSS.disableSubsystemCommand()); ENABLE WHEN DONE
+            joystick2.rightTrigger().whileTrue(
+                Commands.runOnce(()->{
+                    shoterSS.enableComp = true;
+                })
+            ).onFalse(Commands.runOnce(()->{
+                    shoterSS.enableComp = false;
+                }));
     }
 
     public Command getAutonomousCommand() {
