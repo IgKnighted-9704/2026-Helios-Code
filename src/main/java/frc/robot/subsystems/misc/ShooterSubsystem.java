@@ -122,7 +122,7 @@ public class ShooterSubsystem extends SubsystemBase{
                 shooterAngle_kD = ShooterSubsystemTab.add("SHOOTER ANGLE KD", shooterAnglePID.getD()).getEntry();
                 desiredVelReachedEntry = ShooterSubsystemTab.add("Desired Velocity Reached", true).getEntry();
                 desiredAngleReachedEntry = ShooterSubsystemTab.add("Desired Angle Reached", true).getEntry();
-                debugEntry = ShooterSubsystemTab.add("Debug Field", "USE THIS FIELD FOR DEBUGGING").getEntry();
+                debugEntry = ShooterSubsystemTab.add("Debug Field", true).getEntry();
        }
 
     //Utility Methods
@@ -197,9 +197,17 @@ public class ShooterSubsystem extends SubsystemBase{
             return Commands.none(); 
         }
 
+        public Command enableLiveData(boolean isEnabled){
+           return Commands.runOnce(
+            ()->{
+                this.enableComp = isEnabled;
+            }
+            );
+        }
+
     @Override
     public void periodic(){
-        if(enableSubsystem && enableComp){
+        if(enableSubsystem){
             //Shooter Speed 
                 m_velocity.Slot = 0;
                 double motorRps = desired_Velocity /(2 * Math.PI * ShooterSubsystemConstants.FLYWHEEL_RADIUS_METERS * ShooterSubsystemConstants.FLYWHEEL_ROTATIONS_PER_MOTOR_ROTATION);
@@ -259,15 +267,16 @@ public class ShooterSubsystem extends SubsystemBase{
                 shooterAngle_kD.setDouble(shooterAnglePID.getD());
                 desiredVelReachedEntry.setBoolean(ShooterSubsystemConstants.desiredVelReached);
                 desiredAngleReachedEntry.setBoolean(ShooterSubsystemConstants.desiredAngleReached);
-                debugEntry.setString("USE THIS FIELD FOR DEBUGGING");
+                debugEntry.setBoolean(enableComp);
             
-            //Physics Lab
-            double speed = desiredVelEntry.getDouble(0);
-            double angle =  desiredAngleEntry.getDouble(ShooterSubsystemConstants.MIN_ANGLE);;
+            //Physics Lab;
                 if(enableComp){
-                    desired_Velocity = speed;
-                    desired_Angle = angle;
-                } 
+                    desired_Velocity = desiredVelEntry.getDouble(0);
+                    desired_Angle = desiredAngleEntry.getDouble(0);
+                } else if(!enableComp) {
+                    desired_Velocity = 0;
+                    desired_Angle = ShooterSubsystemConstants.MIN_ANGLE;
+                }
 
             //PID + FF Tuning
                 //Speed

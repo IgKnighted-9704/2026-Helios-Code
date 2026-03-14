@@ -395,22 +395,18 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     }
 
     public Command rotateToAngle(double targetAngleDegrees){
-        double targetAngleRadians = Math.toRadians(targetAngleDegrees);
+        var request = new SwerveRequest.FieldCentricFacingAngle();
         var idle = new SwerveRequest.Idle();
-        return Commands.sequence(
-            this.applyRequest(() -> 
-                m_applyRobotSpeeds.withSpeeds(
-                    ChassisSpeeds.fromFieldRelativeSpeeds(
-                        0,
-                        0,
-                        targetAngleRadians,
-                        this.getState().Pose.getRotation()
-                    )
-                )
-            ).withTimeout(1),
 
-            this.applyRequest(() -> idle)
-        );   
+        return this.applyRequest(() ->
+            request.withTargetDirection(
+                Rotation2d.fromDegrees(targetAngleDegrees)
+            )
+        ).until(() ->
+            Math.abs(
+                this.getState().Pose.getRotation().getDegrees() - targetAngleDegrees
+            ) < 1
+        ).andThen(this.applyRequest(() -> idle));  
     }
 
     public Command driveToPose(Pose2d targetPose){

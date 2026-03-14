@@ -54,14 +54,12 @@ public class SubsystemConstants {
             public static final int INTAKE_PIVOT_MOTOR_ID = 22;
 
             //HARDWARE CONSTANTS
-                public static final double SLIDER_OFFSET = 0;
-                public static final double ABS_ENC_2_INCHES_RATIO = 0;
 
-                public static final double STALL_SPEED = 0.1;
+                public static final double STALL_SPEED = 0.05;
 
             //SPEED CONSTANTS
-                public static final double INTAKE_SPEED = 0.5;
-                public static final double OUTTAKE_SPEED = 0.5;
+                public static final double INTAKE_SPEED = 0.25;
+                public static final double OUTTAKE_SPEED = 0.25;
 
             //PID - Slider
                 public static double INTAKE_SLIDER_kP = 0;
@@ -80,8 +78,8 @@ public class SubsystemConstants {
             public static final int KICKER_MOTOR_ID = 17;
             
             //SPEED CONSTANTS
-                public static final double INDEXER_SPEED = 0;
-                public static final double HOPPER_SPEED = 0;
+                public static final double INDEXER_SPEED = 0.75;
+                public static final double HOPPER_SPEED = 0.8;
         }
 
         public static class ShooterSubsystemConstants{
@@ -127,7 +125,7 @@ public class SubsystemConstants {
                 public static double FLYWHEEL_RADIUS_METERS = Units.inchesToMeters(2);
                 public static double ANGLE_TOLERANCE = 0.5;
             //PERIODIC CONSTANTS
-                public static boolean desiredVelReached = true;
-                public static boolean desiredAngleReached = true;
+                public static boolean desiredVelReached = false;
+                public static boolean desiredAngleReached = false;
         }
 }

@@ -66,40 +66,42 @@ public class IntakeSubsystem extends SubsystemBase {
     //Command Based methods
 
         public Command intakeCommand(){
-            return Commands.parallel(
-                Commands.runOnce(()->{
-                    desiredState = IntakeSSTATE.INTAKE_STATE;
-                }),
-                Commands.sequence(
+            return Commands.sequence(
                     Commands.runOnce(()->{
-                        intakeSliderMotor.set(0.25);
+                        intakeSliderMotor.set(-0.5);
                     }),
-                    Commands.waitUntil(()->
-                        isIntakeSliderStall()
+                    Commands.race(
+                        Commands.waitUntil(()->
+                            isIntakeSliderStall()
+                        ), 
+                        Commands.waitSeconds(1)
                     ),
                     Commands.runOnce(()->{
                         intakeSliderMotor.set(0);
+                    }),
+                    Commands.runOnce(()->{
+                        desiredState = IntakeSSTATE.INTAKE_STATE;
                     })
-                )
             );
         }
 
         public Command outtakeCommand(){
-            return Commands.parallel(
-                Commands.runOnce(()->{
-                    desiredState = IntakeSSTATE.OUTTAKE_STATE;
-                }),
-                Commands.sequence(
+            return Commands.sequence(
                     Commands.runOnce(()->{
-                        intakeSliderMotor.set(0.25);
+                        intakeSliderMotor.set(-0.5);
                     }),
-                    Commands.waitUntil(()->
-                        isIntakeSliderStall()
+                    Commands.race(
+                        Commands.waitUntil(()->
+                            isIntakeSliderStall()
+                        ), 
+                        Commands.waitSeconds(1)
                     ),
                     Commands.runOnce(()->{
                         intakeSliderMotor.set(0);
+                    }),
+                    Commands.runOnce(()->{
+                        desiredState = IntakeSSTATE.OUTTAKE_STATE;
                     })
-                )
             );
         }
 
@@ -110,10 +112,13 @@ public class IntakeSubsystem extends SubsystemBase {
                 }),
                 Commands.sequence(
                     Commands.runOnce(()->{
-                        intakeSliderMotor.set(-0.25);
+                        intakeSliderMotor.set(0.5);
                     }),
-                    Commands.waitUntil(()->
-                        isIntakeSliderStall()
+                    Commands.race(
+                        Commands.waitUntil(()->
+                            isIntakeSliderStall()
+                        ), 
+                        Commands.waitSeconds(1)
                     ),
                     Commands.runOnce(()->{
                         intakeSliderMotor.set(0);
@@ -139,16 +144,14 @@ public class IntakeSubsystem extends SubsystemBase {
     @Override
         public void periodic(){
             //STATE MACHINE
-                    if(desiredState == IntakeSSTATE.STOW_STATE && currentState != IntakeSSTATE.STOW_STATE){
-                        intakeMotor.set(0);
-                        currentState = IntakeSSTATE.STOW_STATE;
-                    } else if (desiredState == IntakeSSTATE.INTAKE_STATE && currentState != IntakeSSTATE.INTAKE_STATE){
-                        intake();
-                        currentState = IntakeSSTATE.INTAKE_STATE;
-                    } else if (desiredState == IntakeSSTATE.OUTTAKE_STATE && currentState != IntakeSSTATE.OUTTAKE_STATE){
-                         outtake();
-                        currentState = IntakeSSTATE.OUTTAKE_STATE;
-                    }
+                if(desiredState == IntakeSSTATE.INTAKE_STATE){
+                    intake();
+                }
+                else if(desiredState == IntakeSSTATE.OUTTAKE_STATE){
+                    outtake();
+                } else {
+                    intakeMotor.stopMotor();
+                }
             //Data
                 currentStateEntry.setString(currentState.name());
                 desiredStateEntry.setString(desiredState.name());

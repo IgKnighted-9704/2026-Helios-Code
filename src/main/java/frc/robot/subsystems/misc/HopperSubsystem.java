@@ -44,7 +44,6 @@ public class HopperSubsystem extends SubsystemBase{
         Sensors sensors = new Sensors();
     
     public HopperSubsystem(){
-
         //Tracker Variables
             fuelDetectedIndexer = false;
             kickState = HOPPERSTATE.STOW;
@@ -58,7 +57,7 @@ public class HopperSubsystem extends SubsystemBase{
             desiredVelReachedEntry = HopperSubsystemTab.add("desiredVelocityReached", desiredVelReached).getEntry();
     }
 
-    public void indexFuel(boolean runIndex){
+    public void indexFuel(){
         hopperMotorA.set(HopperSubsystemConstants.HOPPER_SPEED);
         hopperMotorB.set(HopperSubsystemConstants.HOPPER_SPEED);
     }
@@ -76,7 +75,7 @@ public class HopperSubsystem extends SubsystemBase{
         kickerMotor.set(0);
     }
 
-    public Command setKickState(HOPPERSTATE state){
+    public Command setHopperState(HOPPERSTATE state){
         return Commands.runOnce(()->{
             this.kickState = state;
             if(kickState == HOPPERSTATE.STOW){
@@ -90,7 +89,6 @@ public class HopperSubsystem extends SubsystemBase{
     public void periodic(){
         //Update Tracker Variables
             fuelDetectedIndexer = sensors.getIndexSensorA() && sensors.getIndexSensorB();
-            kickState = HOPPERSTATE.RUN;
             desiredVelReached = ShooterSubsystemConstants.desiredVelReached;
             desiredAngleReached = ShooterSubsystemConstants.desiredAngleReached;
         //Data
@@ -101,14 +99,14 @@ public class HopperSubsystem extends SubsystemBase{
 
         //Index Based On State Input
         if(kickState == HOPPERSTATE.RUN){
-            indexFuel(true);
-            if(desiredVelReached && desiredAngleReached && fuelDetectedIndexer){
+            indexFuel();
+            if(desiredVelReached){
                 kickFuel();
             } else {
                 stopKickFuel();
             }
         } else if (kickState == HOPPERSTATE.STOW){
-            indexFuel(false);
+            stopIndex();
             stopKickFuel();
         }
     }
