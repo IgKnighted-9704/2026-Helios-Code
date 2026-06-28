@@ -39,6 +39,8 @@ public class RobotContainer {
     public final IntakeSubsystem intakeSS = new IntakeSubsystem();
     public final HopperSubsystem hopperSS = new HopperSubsystem();
 
+    private final SlewrRateLimiter driveLimiter = new SlewRateLimiter(2.5); //Change the value to increase step.
+
     public RobotContainer() {
         configureBindings();
     }
@@ -51,8 +53,8 @@ public class RobotContainer {
                 drivetrain.setDefaultCommand(
                     // Drivetrain will execute this command periodically
                     drivetrain.applyRequest(() ->
-                        drive.withVelocityX(-joystick2.getLeftY() * MaxSpeed * 0.5) // Drive forward with negative Y (forward)
-                            .withVelocityY(-joystick2.getLeftX() * MaxSpeed * 0.5) // Drive left with negative X (left)
+                        drive.withVelocityX(driveLimiter.calculate(-joystick2.getLeftC() * MaxSpeed)) // Drive forward with negative Y (forward)
+                            .withVelocityY(driveLimiter.calculate(-joystick2.getLeftY() * MaxSpeed)) // Drive left with negative X (left)
                             .withRotationalRate(-joystick2.getRightX() * MaxAngularRate) // Drive counterclockwise 
                     )
                 );
